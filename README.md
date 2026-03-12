@@ -5,7 +5,9 @@ Craft NPC text threads, embed images, and export clean PNGs to use as player han
 
 ---
 
-![CP Message Simulator screenshot](Screenshot.png)
+![CP Message Simulator screenshot](cp-message-simulator-ui.png)
+
+![Message output example](cp-message-example.png)
 
 ---
 
