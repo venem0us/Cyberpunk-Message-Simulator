@@ -54,10 +54,4 @@ Works in any modern browser (Chrome, Firefox, Edge, Safari). No internet connect
 
 ---
 
-## License
-
-MIT — free to use, modify, and share.
-
----
-
 *Built for the dark future. Night City never sleeps.*
