@@ -4,9 +4,10 @@ A browser-based tool for creating fake in-world message screenshots in the style
 Craft NPC text threads, embed images, and export clean PNGs to use as player handouts or session props. No install, no server, no dependencies — just open the HTML file in any browser.
 
 ---
-
+Screenshot of the UI:
 ![CP Message Simulator screenshot](cp-message-simulator-ui.png)
 
+Here is what a completed message looks like:
 ![Message output example](cp-message-example.png)
 
 ---
