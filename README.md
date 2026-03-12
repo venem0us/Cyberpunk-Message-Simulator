@@ -28,7 +28,7 @@ Here is what a completed message looks like:
 
 ## How to Use
 
-1. **Download** `cp-messages-v3.html` from the [Releases](../../releases) page
+1. **Download** `CP_Message_Simulator.html` from the [Releases](../../releases) page
 2. **Open** it in your browser — no install needed
 3. **Edit the header** by clicking the contact name or the message ID (top right)
 4. **Add messages** by typing in the input bar and clicking **RECV** or **SENT** (or press Enter for sent)
