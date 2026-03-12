@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MESSAGES</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --cyan: #00e8f0;
+  --cyan-border: #00c8d8;
+  --cyan-glow: rgba(0,220,240,0.35);
+  --cyan-bg: rgba(0,200,220,0.07);
+  --sent-text: #1aff8c;
+  --sent-border: #00d070;
+  --sent-bg: rgba(0,180,100,0.10);
+  --red-line: #e8003a;
+  --orange-dot: #f0a500;
+}
+
+body {
+  background: #1a0d08;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  font-family: 'Rajdhani', sans-serif;
+}
+
+.screen {
+  position: relative;
+  width: 560px;
+  min-height: 640px;
+  overflow: hidden;
+  background: #0e0704;
+}
+
+.bg-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 100% at 60% 40%, transparent 20%, rgba(8,4,2,0.55) 80%),
+    linear-gradient(to bottom, rgba(8,4,2,0.25) 0%, rgba(8,4,2,0.15) 60%, rgba(8,4,2,0.6) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.scanlines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(0,0,0,0.10) 3px, rgba(0,0,0,0.10) 4px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Drop zone highlight */
+.screen.drag-over::before {
+  content: 'DROP IMAGE';
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: var(--cyan);
+  text-shadow: 0 0 20px var(--cyan);
+  background: rgba(0,0,0,0.7);
+  border: 2px dashed var(--cyan-border);
+}
+
+.ui {
+  position: relative;
+  z-index: 3;
+  padding: 22px 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── HEADER ── */
+.header {
+  padding: 0 18px 10px;
+  position: relative;
+}
+.breadcrumb {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.warn-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--orange-dot);
+  box-shadow: 0 0 6px var(--orange-dot), 0 0 12px rgba(240,165,0,0.4);
+  flex-shrink: 0;
+  align-self: center;
+  animation: pulse-dot 2.4s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { box-shadow: 0 0 5px var(--orange-dot); }
+  50% { box-shadow: 0 0 10px var(--orange-dot), 0 0 20px rgba(240,165,0,0.5); }
+}
+.breadcrumb-text {
+  font-size: 0.82rem; font-weight: 600; letter-spacing: 0.18em;
+  color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow);
+  text-transform: uppercase; opacity: 0.85;
+}
+.breadcrumb-sep { color: var(--cyan); opacity: 0.6; font-size: 0.9rem; }
+.contact-name {
+  font-size: 1.55rem; font-weight: 700; letter-spacing: 0.22em;
+  color: var(--cyan);
+  text-shadow: 0 0 12px var(--cyan-glow), 0 0 24px rgba(0,200,220,0.2);
+  text-transform: uppercase; line-height: 1;
+}
+.header-underlines {
+  position: relative; margin-top: 6px; height: 5px;
+}
+.header-underlines::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0;
+  height: 2px; background: var(--cyan); box-shadow: 0 0 6px var(--cyan-glow);
+}
+.header-underlines::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 3px;
+  height: 1.5px; background: var(--red-line);
+  box-shadow: 0 0 4px rgba(232,0,58,0.5);
+}
+.msg-id {
+  position: absolute; top: 0; right: 18px;
+  font-family: 'Share Tech Mono', monospace; font-size: 0.68rem;
+  color: var(--red-line); letter-spacing: 0.08em;
+  text-shadow: 0 0 6px rgba(232,0,58,0.4);
+}
+
+/* ── MESSAGES ── */
+.messages {
+  padding: 18px 18px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  max-height: 520px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,200,220,0.2) transparent;
+}
+.messages::-webkit-scrollbar { width: 4px; }
+.messages::-webkit-scrollbar-thumb { background: rgba(0,200,220,0.25); }
+
+.bubble {
+  display: inline-flex;
+  flex-direction: column;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  line-height: 1.35;
+  padding: 9px 14px 8px;
+  position: relative;
+  max-width: 90%;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.bubble:hover { filter: brightness(1.12); }
+.bubble[contenteditable="true"]:focus { outline: 2px dashed rgba(0,200,220,0.35); outline-offset: 2px; }
+
+.recv {
+  align-self: flex-start;
+  color: var(--cyan);
+  text-transform: none;
+  border: 1.5px solid var(--cyan-border);
+  background: var(--cyan-bg);
+  text-shadow: 0 0 8px rgba(0,200,220,0.45);
+}
+.sent {
+  align-self: flex-end;
+  color: var(--sent-text);
+  border: 1.5px solid var(--sent-border);
+  background: var(--sent-bg);
+  text-shadow: 0 0 8px rgba(0,200,120,0.4);
+  border-radius: 2px;
+  max-width: 78%;
+  font-weight: 500;
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+/* ── IMAGE inside bubbles ── */
+.bubble-img-wrap {
+  position: relative;
+  display: block;
+  line-height: 0;
+}
+.bubble-img {
+  display: block;
+  max-width: 100%;
+  max-height: 240px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+/* Cyan scanline overlay on images */
+.bubble-img-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 3px,
+    rgba(0,200,220,0.04) 3px, rgba(0,200,220,0.04) 4px
+  );
+  pointer-events: none;
+}
+/* recv image tint */
+.recv .bubble-img-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,200,220,0.08);
+  pointer-events: none;
+  z-index: 1;
+}
+/* sent image tint */
+.sent .bubble-img-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,180,100,0.08);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Caption below image */
+.bubble-caption {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  opacity: 0.75;
+  min-height: 1em;
+}
+.bubble-caption:empty::before {
+  content: attr(data-placeholder);
+  opacity: 0.4;
+  font-style: italic;
+}
+.bubble-caption:focus { outline: none; }
+
+/* Delete button on each bubble */
+.bubble-delete {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 18px; height: 18px;
+  background: #e8003a;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 900;
+  border: none;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  z-index: 10;
+  font-family: monospace;
+}
+.bubble:hover .bubble-delete { display: flex; }
+
+/* ── CONTROLS ── */
+.controls {
+  border-top: 1px solid rgba(0,200,220,0.12);
+  padding: 10px 18px 0;
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.btn {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.72rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 5px 11px; border: 1px solid;
+  background: transparent; cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-c { color: var(--cyan); border-color: var(--cyan-border); }
+.btn-c:hover { background: rgba(0,200,220,0.12); box-shadow: 0 0 8px var(--cyan-glow); }
+.btn-g { color: var(--sent-text); border-color: var(--sent-border); }
+.btn-g:hover { background: rgba(0,180,100,0.12); }
+.btn-r { color: #ff4060; border-color: #ff4060; }
+.btn-r:hover { background: rgba(255,50,80,0.1); }
+.spacer { flex: 1; }
+
+/* Hidden file inputs */
+#fileRecv, #fileSent, #fileBg { display: none; }
+
+.input-row {
+  display: flex; gap: 7px;
+  padding: 8px 18px 4px;
+}
+.msg-input {
+  flex: 1;
+  background: rgba(0,200,220,0.05);
+  border: 1px solid rgba(0,200,220,0.25);
+  color: var(--cyan);
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.88rem; font-weight: 500;
+  letter-spacing: 0.06em; padding: 6px 10px; outline: none;
+}
+.msg-input::placeholder { color: rgba(0,200,220,0.28); font-style: italic; }
+.msg-input:focus { border-color: var(--cyan-border); box-shadow: 0 0 8px var(--cyan-glow); }
+
+.hint-bar {
+  padding: 5px 18px 2px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.58rem;
+  color: rgba(0,200,220,0.28);
+  letter-spacing: 0.06em;
+}
+
+.editable-field:focus { outline: none; border-bottom: 1px dashed rgba(0,200,220,0.5); }
+
+/* bg upload overlay button */
+.bg-upload-btn {
+  position: absolute;
+  bottom: 8px; right: 8px;
+  z-index: 10;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  color: rgba(0,200,220,0.35);
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(0,200,220,0.2);
+  padding: 3px 7px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.15s;
+}
+.bg-upload-btn:hover { color: var(--cyan); border-color: var(--cyan-border); }
+</style>
+</head>
+<body>
+
+<input type="file" id="fileRecv" accept="image/*">
+<input type="file" id="fileSent" accept="image/*">
+<input type="file" id="fileBg"   accept="image/*">
+
+<div class="screen" id="screen">
+  <canvas class="bg-canvas" id="bgCanvas"></canvas>
+  <div class="vignette"></div>
+  <div class="scanlines"></div>
+
+  <div class="ui">
+    <div class="header">
+      <div class="msg-id" id="msgId" contenteditable="true" spellcheck="false">VLD_1402.MSG</div>
+      <div class="breadcrumb">
+        <div class="warn-dot"></div>
+        <span class="breadcrumb-text">MESSAGES</span>
+        <span class="breadcrumb-sep">›</span>
+        <span class="contact-name editable-field" contenteditable="true" spellcheck="false">GORO TAKEMURA</span>
+      </div>
+      <div class="header-underlines"></div>
+    </div>
+
+    <div class="messages" id="messageList">
+      <div class="bubble recv" contenteditable="true" spellcheck="false">
+        <button class="bubble-delete" onclick="deleteBubble(this)" title="Remove">✕</button>
+        How to talk to your crush
+      </div>
+      <div class="bubble recv" contenteditable="true" spellcheck="false">
+        <button class="bubble-delete" onclick="deleteBubble(this)" title="Remove">✕</button>
+        How to support my crush through a series of headaches
+      </div>
+      <div class="bubble recv" contenteditable="true" spellcheck="false">
+        <button class="bubble-delete" onclick="deleteBubble(this)" title="Remove">✕</button>
+        Date ideas
+      </div>
+      <div class="bubble recv" contenteditable="true" spellcheck="false">
+        <button class="bubble-delete" onclick="deleteBubble(this)" title="Remove">✕</button>
+        Top 10 places to go date in Watson
+      </div>
+      <div class="bubble recv" contenteditable="true" spellcheck="false">
+        <button class="bubble-delete" onclick="deleteBubble(this)" title="Remove">✕</button>
+        IS THERE ANYTHING TO DO IN THIS WASTELAND?
+      </div>
+      <div class="bubble sent" contenteditable="true" spellcheck="false">
+        <button class="bubble-delete" onclick="deleteBubble(this)" title="Remove">✕</button>
+        Goro, you can't find anything because you're sending your searches to me as messages!!!
+      </div>
+      <div class="bubble recv" contenteditable="true" spellcheck="false">
+        <button class="bubble-delete" onclick="deleteBubble(this)" title="Remove">✕</button>
+        I apologize, it is this cursed interface... Or a virus.
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn btn-c" onclick="addTextMsg('recv')">+ TEXT RECV</button>
+      <button class="btn btn-g" onclick="addTextMsg('sent')">+ TEXT SENT</button>
+      <button class="btn btn-c" onclick="triggerImgPick('recv')">📎 IMG RECV</button>
+      <button class="btn btn-g" onclick="triggerImgPick('sent')">📎 IMG SENT</button>
+      <div class="spacer"></div>
+      <button class="btn btn-r"  onclick="triggerBgPick()">BG IMG</button>
+      <button class="btn btn-c"  onclick="saveImg()">⬇ SAVE PNG</button>
+    </div>
+
+    <div class="input-row">
+      <input class="msg-input" id="newMsg" placeholder="TYPE MESSAGE TEXT..." maxlength="240">
+      <button class="btn btn-c" onclick="addTextMsg('recv')">RECV</button>
+      <button class="btn btn-g" onclick="addTextMsg('sent')">SENT</button>
+    </div>
+    <div class="hint-bar">// CLICK BUBBLE TO EDIT · HOVER FOR ✕ · DRAG IMAGE ONTO SCREEN TO EMBED · BG IMG REPLACES BACKGROUND</div>
+  </div>
+</div>
+
+<script>
+/* ── BACKGROUND CANVAS ── */
+let bgImageData = null;
+
+function drawBg() {
+  const canvas = document.getElementById('bgCanvas');
+  const screen = canvas.parentElement;
+  canvas.width  = screen.offsetWidth  || 560;
+  canvas.height = screen.offsetHeight || 640;
+  const w = canvas.width, h = canvas.height;
+  const ctx = canvas.getContext('2d');
+
+  if (bgImageData) {
+    // Draw user-supplied background image
+    const img = new Image();
+    img.onload = () => {
+      // cover-fit
+      const scale = Math.max(w / img.width, h / img.height);
+      const sw = img.width * scale, sh = img.height * scale;
+      const sx = (w - sw) / 2, sy = (h - sh) / 2;
+      ctx.drawImage(img, sx, sy, sw, sh);
+      // Darken overlay so UI stays readable
+      ctx.fillStyle = 'rgba(8,4,2,0.52)';
+      ctx.fillRect(0, 0, w, h);
+      addNoise(ctx, w, h);
+    };
+    img.src = bgImageData;
+    return;
+  }
+
+  // Default generated background
+  const bg = ctx.createLinearGradient(0, 0, w, h);
+  bg.addColorStop(0,   '#180c08');
+  bg.addColorStop(0.4, '#1e0f0a');
+  bg.addColorStop(1,   '#0d0705');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+
+  const glow = ctx.createRadialGradient(w*.62, h*.32, 0, w*.62, h*.32, w*.55);
+  glow.addColorStop(0,    'rgba(160,60,20,0.28)');
+  glow.addColorStop(0.35, 'rgba(120,35,10,0.18)');
+  glow.addColorStop(1,    'rgba(0,0,0,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
+
+  const glow2 = ctx.createRadialGradient(w*.55, h*.65, 0, w*.55, h*.65, w*.4);
+  glow2.addColorStop(0, 'rgba(100,40,10,0.18)');
+  glow2.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow2; ctx.fillRect(0, 0, w, h);
+
+  // Figure silhouette
+  ctx.save(); ctx.globalAlpha = 0.22;
+  const bodyG = ctx.createRadialGradient(w*.58,h*.55,10, w*.58,h*.55,w*.38);
+  bodyG.addColorStop(0,'rgba(90,40,20,0.7)'); bodyG.addColorStop(0.5,'rgba(50,20,10,0.4)'); bodyG.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle = bodyG; ctx.beginPath(); ctx.ellipse(w*.58,h*.62,w*.32,h*.42,0,0,Math.PI*2); ctx.fill();
+  const headG = ctx.createRadialGradient(w*.60,h*.26,5, w*.60,h*.26,w*.15);
+  headG.addColorStop(0,'rgba(100,50,25,0.5)'); headG.addColorStop(0.6,'rgba(60,25,10,0.3)'); headG.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle = headG; ctx.beginPath(); ctx.ellipse(w*.60,h*.26,w*.14,h*.16,-0.1,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  addNoise(ctx, w, h);
+}
+
+function addNoise(ctx, w, h) {
+  ctx.save(); ctx.globalAlpha = 0.04;
+  for (let y=0;y<h;y+=2) for (let x=0;x<w;x+=2) {
+    ctx.fillStyle=`rgba(255,200,150,${Math.random()*.3})`; ctx.fillRect(x,y,1,1);
+  }
+  ctx.restore();
+}
+
+drawBg();
+
+/* ── TEXT MESSAGES ── */
+function getInputText() {
+  const el = document.getElementById('newMsg');
+  const v = el.value.trim(); el.value = '';
+  return v || 'NEW MESSAGE';
+}
+
+function makeBubble(type) {
+  const div = document.createElement('div');
+  div.className = `bubble ${type}`;
+  div.contentEditable = 'true';
+  div.spellcheck = false;
+  const delBtn = document.createElement('button');
+  delBtn.className = 'bubble-delete';
+  delBtn.textContent = '✕';
+  delBtn.title = 'Remove';
+  delBtn.onclick = () => deleteBubble(delBtn);
+  div.appendChild(delBtn);
+  return div;
+}
+
+function addTextMsg(type) {
+  const text = getInputText();
+  const div = makeBubble(type);
+  div.append(document.createTextNode(text));
+  document.getElementById('messageList').appendChild(div);
+  div.scrollIntoView({ behavior:'smooth', block:'end' });
+}
+
+function deleteBubble(btn) {
+  btn.closest('.bubble').remove();
+}
+
+document.getElementById('newMsg').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addTextMsg('sent'); }
+});
+
+/* ── IMAGE MESSAGES ── */
+let pendingImgType = 'recv';
+
+function triggerImgPick(type) {
+  pendingImgType = type;
+  document.getElementById(type === 'recv' ? 'fileRecv' : 'fileSent').click();
+}
+
+function handleImgFile(file, type) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => insertImageBubble(e.target.result, type, '');
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('fileRecv').addEventListener('change', e => {
+  handleImgFile(e.target.files[0], 'recv');
+  e.target.value = '';
+});
+document.getElementById('fileSent').addEventListener('change', e => {
+  handleImgFile(e.target.files[0], 'sent');
+  e.target.value = '';
+});
+
+function insertImageBubble(src, type, caption) {
+  const div = makeBubble(type);
+  // Remove contenteditable from outer div when it holds an image (prevent weird edits)
+  div.removeAttribute('contenteditable');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble-img-wrap';
+
+  const img = document.createElement('img');
+  img.className = 'bubble-img';
+  img.src = src;
+  img.draggable = false;
+  wrap.appendChild(img);
+  div.appendChild(wrap);
+
+  const cap = document.createElement('div');
+  cap.className = 'bubble-caption';
+  cap.contentEditable = 'true';
+  cap.spellcheck = false;
+  cap.dataset.placeholder = type === 'recv' ? 'ADD CAPTION...' : 'Add caption...';
+  if (caption) cap.textContent = caption;
+  div.appendChild(cap);
+
+  document.getElementById('messageList').appendChild(div);
+  div.scrollIntoView({ behavior:'smooth', block:'end' });
+}
+
+/* ── DRAG & DROP images onto screen ── */
+const screen = document.getElementById('screen');
+
+screen.addEventListener('dragover', e => {
+  e.preventDefault();
+  screen.classList.add('drag-over');
+  // Determine recv vs sent from cursor X position
+  pendingImgType = e.clientX < screen.getBoundingClientRect().left + screen.offsetWidth / 2 ? 'recv' : 'sent';
+});
+screen.addEventListener('dragleave', e => {
+  if (!screen.contains(e.relatedTarget)) screen.classList.remove('drag-over');
+});
+screen.addEventListener('drop', e => {
+  e.preventDefault();
+  screen.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) handleImgFile(file, pendingImgType);
+});
+
+/* ── BACKGROUND IMAGE ── */
+function triggerBgPick() {
+  document.getElementById('fileBg').click();
+}
+document.getElementById('fileBg').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => { bgImageData = ev.target.result; drawBg(); };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+});
+
+/* ── SAVE PNG ── */
+function saveImg() {
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+  script.onload = () => {
+    html2canvas(screen, {
+      backgroundColor: '#0e0704',
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      ignoreElements: el =>
+        el.classList.contains('controls') ||
+        el.classList.contains('input-row') ||
+        el.classList.contains('hint-bar') ||
+        el.classList.contains('bubble-delete')
+    }).then(canvas => {
+      const a = document.createElement('a');
+      a.download = 'cp-message.png';
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    });
+  };
+  document.head.appendChild(script);
+}
+</script>
+</body>
+</html>
