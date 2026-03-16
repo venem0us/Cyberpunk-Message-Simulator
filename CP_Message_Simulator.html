@@ -635,7 +635,7 @@ function saveImg() {
         el.classList.contains('bubble-delete')
     }).then(canvas => {
       const a = document.createElement('a');
-      a.download = 'cp-message.png';
+      a.download = 'cpunk-message.png';
       a.href = canvas.toDataURL('image/png');
       a.click();
     });
