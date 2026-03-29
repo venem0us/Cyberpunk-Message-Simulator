@@ -3,6 +3,7 @@ A browser-based tool for creating fake in-world message screenshots in the style
 
 Craft NPC text threads, embed images, and export clean PNGs to use as player handouts or session props. No install, no server, no dependencies — just open the HTML file in any browser.
 
+A hosted version can be found [here](https://tabletopscribe.app/cpunkmsg/)!
 ---
 Screenshot of the UI:
 
